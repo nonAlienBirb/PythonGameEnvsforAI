@@ -1,4 +1,4 @@
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Optional
 import pygame #2.5.2 
 import sys
 import random
@@ -14,6 +14,32 @@ class Base:
     @classmethod
     def GetKeys(cls, instance):
         return instance.keys
+    @staticmethod
+    def access_player_stuff(player_id: int) -> Optional[Tuple[int, int, int, int]]:
+        if 0 < player_id <= len(Player.Player_instances):
+            for i in range(len(Player.Player_instances)):
+                if Player.Player_instances[i].id == player_id:
+                    return (
+                        Player.Player_instances[i].X,
+                        Player.Player_instances[i].Y,
+                        Player.Player_instances[i].Width,
+                        Player.Player_instances[i].Height
+                    )
+        return None
+
+    @staticmethod
+    def access_player_instance_number():
+        return len(Player.Player_instances) if Player.Player_instances else None
+    @staticmethod
+    def access_ball_stuff(index): 
+        if 0<=index<len(Ball.ball_instances):
+            return (Ball.ball_instances[index].X,Ball.ball_instances[index].Y,Ball.ball_instances[index].size)
+        else:
+            return None
+    @staticmethod
+    def access_ball_number():
+        return len(Ball.ball_instances) if Ball.ball_instances else None
+
 class Player(Base):
     Player_instances = []
     def __init__(self,id:int,Width:int=16,Height:int=76) -> None:
@@ -26,17 +52,9 @@ class Player(Base):
         self.X = 15 if self.id%2 else self.ScreenWidth-self.Width-15
         self.speed = 5
         self.score = 0
-    @staticmethod
-    def access_ball_stuff(index): 
-        if 0<=index<len(Ball.ball_instances):
-            return (Ball.ball_instances[index].X,Ball.ball_instances[index].Y,Ball.ball_instances[index].size)
-        else:
-            return None
-    @staticmethod
-    def access_ball_number():
-        return len(Ball.ball_instances) if Ball.ball_instances else None
 
-    def Human(self):
+
+    def Human(self): 
         Base.check(self)
         keys = Base.GetKeys(self) 
         if self.id%2:
@@ -50,7 +68,7 @@ class Player(Base):
             if keys[pygame.K_s]:
                 self.Y+=self.speed
         
-    def Unbeatable(self):
+    def Unbeatable(self): #
         balls = []
         ballXs = []
 
@@ -82,7 +100,7 @@ class Player(Base):
             case None:
                 self.Human()
             case 'Human':
-                self.Human
+                self.Human()
             case 'Unbeatable':
                 self.Unbeatable()
             
@@ -104,17 +122,6 @@ class Ball(Base):
         self.Yspeed = 0
         self.isGame = False
         self.started = False
-    @staticmethod    
-    def access_player_stuff(index):
-        if 0<=index<len(Player.Player_instances):
-            return Player.Player_instances[index].X,Player.Player_instances[index].Y,Player.Player_instances[index].Width,Player.Player_instances[index].Height
-        else:
-            return None
-    @staticmethod
-    def access_player_instance_number():
-        return len(Player.Player_instances) if Player.Player_instances else None
-
-
     def resetPoss(self):
         self.X = (self.ScreenWidth-self.size)//2
         self.Y = (self.ScreenHeight-self.size)//2
@@ -138,10 +145,12 @@ class Ball(Base):
         
         ballObj = pygame.Rect(self.X,self.Y,self.size,self.size)
         for i in range(self.access_player_instance_number()):
-            x,y,w,h = self.access_player_stuff(i)
-            Pobj = pygame.Rect(x,y,w,h)
-            if ballObj.colliderect(Pobj):
-                self.Xspeed=-self.Xspeed
+            stuff = self.access_player_stuff(i+1)
+            if stuff is not None:
+                Pobj = pygame.Rect(stuff[0], stuff[1], stuff[2], stuff[3])
+                if ballObj.colliderect(Pobj):
+                    self.Xspeed = -self.Xspeed
+
     def for_dibug(self):
         a,b,c,d = Ball.access_player_stuff(0)
         print(a,b,c,d)
@@ -157,7 +166,14 @@ class Pong(Base):
     def updateScreen(self,ScreenColor:Tuple[int,int,int]=(0,0,0)):
         self.screen.fill(ScreenColor)
     def update(self):
-        # for i in 
+        max_instances = max(self.access_player_instance_number(), self.access_ball_number())
+        for index in range(max_instances):
+            if index < self.access_player_instance_number():
+                player_instance = Player.Player_instances[index]
+                self.draw(player_instance.X, player_instance.Y, player_instance.Width, player_instance.Height)
+            if index < self.access_ball_number():
+                ball_instance = Ball.ball_instances[index]
+                self.draw(ball_instance.X, ball_instance.Y, ball_instance.size, ball_instance.size)
         pygame.display.flip()
         self.clock.tick(60)
         for event in pygame.event.get():
